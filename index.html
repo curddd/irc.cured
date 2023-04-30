@@ -10,10 +10,10 @@
       const messagesDiv = document.getElementById('messages');
       const inputBox = document.getElementById('input');
 
-      const socket = new WebSocket('wss://localhost:8080');
+      const socket = new WebSocket('ws://chatter.today:8080');
 
       socket.onmessage = (event) => {
-        const message = event.data;
+        const message = atob(event.data);
         const messageElement = document.createElement('div');
         messageElement.textContent = message;
         messagesDiv.appendChild(messageElement);

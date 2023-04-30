@@ -8,8 +8,8 @@ const TCP_HOST = 'localhost';
 const TCP_PORT = 6667; // IRC default port
 
 const sslOptions = {
-  key: fs.readFileSync('/path/to/ssl/key.pem'),
-  cert: fs.readFileSync('/path/to/ssl/cert.pem'),
+  cert: fs.readFileSync('/etc/ssl/chatter.today.crt'),
+  key: fs.readFileSync('/etc/ssl/private/chatter.today.key'),
 };
 
 const wss = new WebSocket.Server({ port: WS_PORT, server: https.createServer(sslOptions) });

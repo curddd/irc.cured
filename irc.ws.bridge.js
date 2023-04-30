@@ -13,10 +13,10 @@ tcpClient.connect(TCP_PORT, TCP_HOST, () => {
 });
 
 tcpClient.on('data', (data) => {
+console.log(data.toString(), btoa(data));
   wss.clients.forEach((client) => {
     if (client.readyState === WebSocket.OPEN) {
-      client.send(data);
-    }
+      client.send(btoa(data)); }
   });
 });
 

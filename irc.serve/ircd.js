@@ -16,9 +16,7 @@ server.on('connection', (client) => {
 
     // broadcast message to all connected clients
     clients.forEach((c) => {
-      if (c !== client) {
-        c.write(`${client.remoteAddress}:${client.remotePort} says: ${data}`);
-      }
+        c.write(`${data}`);
     });
   });
 
