@@ -1,31 +1,56 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <title>WebSocket Chat</title>
+    <title>IRC Chat</title>
+    <style>
+      .hidden{
+        display: none;
+      }
+    </style>
   </head>
   <body>
-    <div id="messages"></div>
-    <input type="text" id="input" placeholder="Type a message and press enter">
-    <script>
-      const messagesDiv = document.getElementById('messages');
-      const inputBox = document.getElementById('input');
+    <div id="login">
+      Nick:<input id="nick" value="chatter"><br>
+      Channel:<input id="channel" value="chatter"><br>
+      <button onclick="connect()">Connect</button>
+      
+    </div>
+    <div id="chat-main" class="hidden">
+      <div id="messages"></div>
+      <input type="text" id="input" placeholder="Type a message and press enter">
+      <script>
+        const messagesDiv = document.getElementById('messages');
+        const inputBox = document.getElementById('input');
 
-      const socket = new WebSocket('ws://chatter.today:8080');
+        const socket = new WebSocket('ws://chatter.today:8080');
 
-      socket.onmessage = (event) => {
-        const message = atob(event.data);
-        const messageElement = document.createElement('div');
-        messageElement.textContent = message;
-        messagesDiv.appendChild(messageElement);
-      };
+        socket.onmessage = (event) => {
+          const message = atob(event.data);
+          const messageElement = document.createElement('div');
+          messageElement.textContent = message;
+          messagesDiv.appendChild(messageElement);
+        };
 
-      inputBox.addEventListener('keydown', (event) => {
-        if (event.key === 'Enter' && inputBox.value.trim() !== '') {
-          socket.send(inputBox.value);
-          inputBox.value = '';
+        inputBox.addEventListener('keydown', (event) => {
+          if (event.key === 'Enter' && inputBox.value.trim() !== '') {
+            socket.send(inputBox.value);
+            inputBox.value = '';
+          }
+        });
+      </script>
+      <script>
+        function connect(){
+          let nick = document.getElementById("nick").value;
+          let channel = document.getElementById("channel").value;
+          socket.send(`NICK ${nick}`);
+          socket.send(`JOIN ${channel}`);
+
+          document.getElementById("login").toggleClass("hidden");
+          document.getElementById("chat-main").toggleClass("hidden");
         }
-      });
-    </script>
+      </script>
+
+    </div>
   </body>
 </html>
 
