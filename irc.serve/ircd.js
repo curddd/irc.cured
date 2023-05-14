@@ -5,6 +5,7 @@ const server = net.createServer();
 
 let chans_to_conns = new Map();
 let conns_to_nicks = new Map();
+let nicks_to_conns = new Map();
 let full_nick_list = [];
 
 function getAllNicksInChan(chan){
@@ -40,6 +41,7 @@ server.on('connection', (client) => {
           }
 
           conns_to_nicks.set(client,own_nick);
+          nicks_to_conns.set(own_nick,client);
           //send welcome messages
           client.write(`:chatter.today 001 ${own_nick} :Welcome to the IRC server chatter.today\n`);
           client.write(`:chatter.today 002 ${own_nick} :Your host is chatter.today, running version irc.cured\n`);
@@ -76,7 +78,8 @@ server.on('connection', (client) => {
 
 
 	client.on('end', () => {
-		clients.delete(client);
+		conns_to_nicks.delete(client);
+    nicks_to_conns.delete(own_nick);
 	});
 
 	client.on('error', (e) => {
@@ -96,7 +99,12 @@ server.listen(PORT, () => {
 
 
 function sendMsg(from_nick, msg){
-  sendToChannel(from_nick,msg[1],msg[2]);
+  if(msg[1][0]=='#'){
+    sendToChannel(from_nick,msg[1],msg[2]);
+  }
+  else{
+    nicks.write(`:${from_nick} PRIVMSG ${msg[1]} ${msg[2]}\n`);
+  }
 }
 
 let channels = new Map();
@@ -148,7 +156,9 @@ function changeNick(client,wordArr){
   let old_nick = conns_to_nicks.get(client);
   full_nick_list.splice(full_nick_list.indexOf(old_nick),1);
   full_nick_list.push(new_nick);
-
+  conns_to_nicks.set(client,new_nick);
+  nicks_to_conns.delete(old_nick);
+  nicks_to_conns.set(new_nick,client);
 	bcToAllConnected(client, `${old_nick} changed nick to ${new_nick}`);
   return 1;
 }
