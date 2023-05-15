@@ -21,57 +21,65 @@ function getAllNicksInChan(chan){
 
 server.on('connection', (client) => {
   let own_nick = null;
+  let user_details = null;
+
 	client.on('data', (data) => {
+
 	  console.log(`Received data from client: ${data}`);
-		let inc_msgs = data.toString().split('\n');
+
+		let inc_msgs = data.toString().replace('\r','').split('\n');
 
     for(let i=0; i<inc_msgs.length; i++){
+
       if(inc_msgs[i]==''){
         continue;
       }
-      let inc_msg = inc_msgs[i].split(' ');
+
+      let inc_msg = inc_msgs[i];
       console.log(inc_msg);
-      if(own_nick==null){
-        if(inc_msg[0] == 'NICK' && inc_msg.length==2 && inc_msg[1][0]!='#'){
-          //set nick
-          own_nick = inc_msg[1];
 
-          while(full_nick_list.indexOf(own_nick)!=-1){
-            own_nick += '_';
-          }
+      //FIRST NICK MESSAGE
 
-          conns_to_nicks.set(client,own_nick);
-          nicks_to_conns.set(own_nick,client);
-          //send welcome messages
-          client.write(`:chatter.today 001 ${own_nick} :Welcome to the IRC server chatter.today\n`);
-          client.write(`:chatter.today 002 ${own_nick} :Your host is chatter.today, running version irc.cured\n`);
-          client.write(`:chatter.today 003 ${own_nick} :This server was created Sun May 15 2023 at 12:34:56 CEST\n`);
-          client.write(`:chatter.today 004 ${own_nick} :chatter.today irc.for.cured.cripples\n`);
-          
-          client.write(`:chatter.today 375 ${own_nick} :- Welcome to the IRC server!\n`);
-          client.write(`:chatter.today 372 ${own_nick} :- If you have any questions or concerns, please contact an operator or administrator.\n`);
-          client.write(`:chatter.today 376 ${own_nick} :- End of MOTD.\n`);
+      if(own_nick==null && inc_msg.startsWith("NICK ")){
+        
+        own_nick = inc_msg.split("NICK ")[1];
+        console.log("he has the nick", own_nick, inc_msg.split("NICK "))
+        while(full_nick_list.indexOf(own_nick)!=-1){
+          own_nick += '_';
         }
-      }
 
-
-      switch(inc_msg[0]){
-        case "JOIN":
-          tryJoin(client,inc_msg);
-        break;
-        case "NICK":
-          let changed = changeNick(client,inc_msg);
-          if(changed){
-            own_nick = inc_msg[1];
-          }
-        break;
-        case "PRIVMSG":
-          sendMsg(conns_to_nicks.get(client),inc_msg);
-        break;
-        case "PING":
-          client.write("PONG\n");
-        break;
+        conns_to_nicks.set(client,own_nick);
+        nicks_to_conns.set(own_nick,client);
       }
+    
+      //FIRST USER MESSSAGE
+      if(user_details == null && inc_msg.startsWith('USER')){
+        user_details = 'some_chatter'
+        //send welcome messages
+        client.write("IS THSI DATA FFROM WHOM?")
+        client.write(`:chatter.today 001 ${own_nick} :Welcome to the IRC server chatter.today\n`);
+        client.write(`:chatter.today 002 ${own_nick} :Your host is chatter.today, running version irc.cured\n`);
+        client.write(`:chatter.today 003 ${own_nick} :This server was created Sun May 15 2023 at 12:34:56 CEST\n`);
+        client.write(`:chatter.today 004 ${own_nick} :chatter.today irc.for.cured.cripples\n`);
+        
+        client.write(`:chatter.today 375 ${own_nick} :- Welcome to the IRC server!\n`);
+        client.write(`:chatter.today 372 ${own_nick} :- If you have any questions or concerns, please contact an operator or administrator.\n`);
+        client.write(`:chatter.today 376 ${own_nick} :- End of MOTD.\n`);
+      }
+         
+      if(inc_msg.startsWith("JOIN ")){
+        let nick = conns_to_nicks.get(client);
+        console.log("nick join", nick)
+        tryJoin(client,inc_msg);
+      }
+        
+      if(inc_msg.startsWith("PRIVMSG ")){
+        sendMsg(conns_to_nicks.get(client),inc_msg);
+      }
+      if(inc_msg.startsWith("PING")){
+        client.write(":chatter.today PONG\r\n");
+      }
+          
     }
   });
 
@@ -98,28 +106,33 @@ server.listen(PORT, () => {
 
 
 
-function sendMsg(from_nick, msg){
-  if(msg[1][0]=='#'){
-    sendToChannel(from_nick,msg[1],msg[2]);
+function sendMsg(from_nick, inc_msg){
+  let msg = inc_msg.replace("PRIVMSG ", "");
+
+  if(msg.startsWith('#')){
+    sendToChannel(from_nick,msg);
   }
   else{
     nicks.write(`:${from_nick} PRIVMSG ${msg[1]} ${msg[2]}\n`);
   }
 }
 
-let channels = new Map();
 
-function tryJoin(client,wordArr){
-  console.log("inc",wordArr);
-	let channel = wordArr[1].split(':')[0];
-	if(!channel[0]=='#'){
-		return;
-	}
+function tryJoin(client,join_msg){
+  console.log("inc",join_msg);
 
+  let channel = join_msg.replace("JOIN ", '');
+  //no multi channel join at once
+  channel.replace(' ', '_');
+  if(!channel.startsWith('#')){
+    channel = '#'+channel;
+  }
+  client.write(`:${conns_to_nicks.get(client)} JOIN :${channel}\r\n`)
+  console.log(`:${conns_to_nicks.get(client)} JOIN :${channel}\r\n`);
   //new channel
 	if(!chans_to_conns.has(channel)){
 		chans_to_conns.set(channel, [client]);
-    client.write(`:chatter.today 331 ${conns_to_nicks.get(client)} ${channel} :No topic is set\n`);
+    client.write(`:chatter.today 331 ${conns_to_nicks.get(client)} ${channel} :No topic is set\r\n`);
 	}
   //existing channel
 	else{
@@ -127,17 +140,22 @@ function tryJoin(client,wordArr){
 		old_channel.push(client);
 		chans_to_conns.set(channel, old_channel);
     
-    client.write(`:chatter.today 332 ${conns_to_nicks.get(client)} ${channel} :No Topic, but not new Channel\n`);
+    client.write(`:chatter.today 332 ${conns_to_nicks.get(client)} ${channel} :No Topic, but not new Channel\r\n`);
 	}
 
   //server sends join message / receipt
   //TODO
-  //sendToChannel(channel,`:${clients.get(client).nick} JOIN ${channel}`);
+  //(channel,`:${conns_to_nicks.get(client)} JOIN ${channel}`);
+  //get all clients in channel
+  let clients_in_chan = chans_to_conns.get(channel);
+  for(let i=0; i<clients_in_chan.length; i++){
+    //clients_in_chan[i].write(`${conns_to_nicks.get(client)} JOIN ${channel}\n`);
+  }
   //list all users in the channel
   let userlist = getAllNicksInChan(channel);
   
-  client.write(`:chatter.today 353 ${conns_to_nicks.get(client)} = ${channel} :${userlist}\n`);
-  client.write(`:chatter.today 366 ${conns_to_nicks.get(client)} ${channel} :End of /NAMES list.\n`);
+  client.write(`:chatter.today 353 ${conns_to_nicks.get(client)} = ${channel} :${userlist}\r\n`);
+  client.write(`:chatter.today 366 ${conns_to_nicks.get(client)} ${channel} :End of /NAMES list.\r\n`);
 
 }
 
@@ -159,24 +177,22 @@ function changeNick(client,wordArr){
   conns_to_nicks.set(client,new_nick);
   nicks_to_conns.delete(old_nick);
   nicks_to_conns.set(new_nick,client);
-	bcToAllConnected(client, `${old_nick} changed nick to ${new_nick}`);
   return 1;
 }
 
-function bcToAllConnected(client, msg){
-	let client_data = clients.get(client);
-	for(let i=0; i<client_data.channels.length;i++){
-		sendTo(client_data.channels[i], msg);
-	}
-}
 
-function sendToChannel(source, target, message){
-		let to_send_to = chans_to_conns.get(target);
+function sendToChannel(source, message){
+
+    let msg = message.split(' :');
+    let channel = msg[0];
+    msg = msg[1];
+
+		let to_send_to = chans_to_conns.get(channel);
 		for(let i=0; i<to_send_to.length; i++){
       if(source == conns_to_nicks.get(to_send_to[i])){
         continue;
       }
-			to_send_to[i].write(`:${source} PRIVMSG ${target} ${message}\n`);
+			to_send_to[i].write(`:${source} PRIVMSG ${channel} ${msg}\n`);
 		}
 		return;
 }
