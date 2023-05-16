@@ -84,6 +84,7 @@ server.on('connection', (client) => {
 
 
 	client.on('end', () => {
+    console.log("client disconnected");
 		conns_to_nicks.delete(client);
     nicks_to_conns.delete(own_nick);
 	});
@@ -110,9 +111,11 @@ function sendMsg(from_nick, inc_msg){
   if(msg.startsWith('#')){
     sendToChannel(from_nick,msg);
   }
+  /*
   else{
     nicks.write(`:${from_nick} PRIVMSG ${msg[1]} ${msg[2]}\n`);
   }
+  */
 }
 
 

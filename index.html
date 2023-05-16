@@ -7,22 +7,31 @@
         display: none;
       }
     </style>
+    
   </head>
   <body>
-    <div id="login">
-      Nick:<input id="nick" value="chatter"><br>
-      Channel:<input id="channel" value="chatter"><br>
-      <button onclick="connect()">Connect</button>
-      
+    <div id="main">
+        <div id="left"></div>
+        <div id="right">
+            <div id="login">
+                Nick:<input id="nick" value="chatter"><br>
+                Channel:<input id="channel" value="chatter"><br>
+                <button onclick="connect()">Connect</button>
+                
+            </div>
+            <div id="chat-main" class="hidden">
+            <div id="messages"></div>
+            <input type="text" id="input" placeholder="Type a message and press enter">
+            </div>
+        </div>
     </div>
-    <div id="chat-main" class="hidden">
-      <div id="messages"></div>
-      <input type="text" id="input" placeholder="Type a message and press enter">
-      <script>
+    
+
+    <script>
         const messagesDiv = document.getElementById('messages');
         const inputBox = document.getElementById('input');
 
-        const socket = new WebSocket('ws://chatter.today:8080');
+        const socket = new WebSocket(`ws://${window.location.hostname}:8080`);
 
         socket.onmessage = (event) => {
           const message = atob(event.data);
@@ -33,24 +42,33 @@
 
         inputBox.addEventListener('keydown', (event) => {
           if (event.key === 'Enter' && inputBox.value.trim() !== '') {
-            socket.send(inputBox.value);
+            let to_send = `PRIVMSG ${channel} :${inputBox.value}`;
+            socket.send(to_send);
             inputBox.value = '';
+
+            const messageElement = document.createElement('div');
+            messageElement.textContent = to_send;
+            messagesDiv.appendChild(messageElement);
           }
         });
-      </script>
-      <script>
+
+        var nick = null;
+        var channel = null;
         function connect(){
-          let nick = document.getElementById("nick").value;
-          let channel = document.getElementById("channel").value;
+          nick = document.getElementById("nick").value;
+          channel = document.getElementById("channel").value;
+          if(!(channel.startsWith('#'))){
+            console.log("hash");
+            channel = '#'+channel;
+          }
           socket.send(`NICK ${nick}`);
           socket.send(`JOIN ${channel}`);
 
-          document.getElementById("login").toggleClass("hidden");
-          document.getElementById("chat-main").toggleClass("hidden");
+          document.getElementById("login").classList.toggle("hidden");
+          document.getElementById("chat-main").classList.toggle("hidden");
         }
       </script>
 
-    </div>
   </body>
 </html>
 
