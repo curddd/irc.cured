@@ -6,13 +6,12 @@ const server = net.createServer();
 let chans_to_conns = new Map();
 let conns_to_nicks = new Map();
 let nicks_to_conns = new Map();
-let full_nick_list = [];
 
 function getAllNicksInChan(chan){
   let conns = chans_to_conns.get(chan);
-  let nicks = [];
+  let nicks = "";
   for(let i=0; i<conns.length; i++){
-    nicks.push(conns_to_nicks.get(conns[i]));
+    nicks += conns_to_nicks.get(conns[i]) + " ";
   }
   return nicks;
 }
@@ -44,7 +43,7 @@ server.on('connection', (client) => {
         
         own_nick = inc_msg.split("NICK ")[1];
         console.log("he has the nick", own_nick, inc_msg.split("NICK "))
-        while(full_nick_list.indexOf(own_nick)!=-1){
+        while(nicks_to_conns.has(own_nick)){
           own_nick += '_';
         }
 
@@ -56,15 +55,14 @@ server.on('connection', (client) => {
       if(user_details == null && inc_msg.startsWith('USER')){
         user_details = 'some_chatter'
         //send welcome messages
-        client.write("IS THSI DATA FFROM WHOM?")
-        client.write(`:chatter.today 001 ${own_nick} :Welcome to the IRC server chatter.today\n`);
-        client.write(`:chatter.today 002 ${own_nick} :Your host is chatter.today, running version irc.cured\n`);
-        client.write(`:chatter.today 003 ${own_nick} :This server was created Sun May 15 2023 at 12:34:56 CEST\n`);
-        client.write(`:chatter.today 004 ${own_nick} :chatter.today irc.for.cured.cripples\n`);
+        client.write(`:chatter.today 001 ${own_nick} :Welcome to the IRC server chatter.today\r\n`);
+        client.write(`:chatter.today 002 ${own_nick} :Your host is chatter.today, running version irc.cured\r\n`);
+        client.write(`:chatter.today 003 ${own_nick} :This server was created Sun May 15 2023 at 12:34:56 CEST\r\n`);
+        client.write(`:chatter.today 004 ${own_nick} :chatter.today irc.for.cured.cripples\r\n`);
         
-        client.write(`:chatter.today 375 ${own_nick} :- Welcome to the IRC server!\n`);
-        client.write(`:chatter.today 372 ${own_nick} :- If you have any questions or concerns, please contact an operator or administrator.\n`);
-        client.write(`:chatter.today 376 ${own_nick} :- End of MOTD.\n`);
+        client.write(`:chatter.today 375 ${own_nick} :- Welcome to the IRC server!\r\n`);
+        client.write(`:chatter.today 372 ${own_nick} :- If you have any questions or concerns, please contact an operator or administrator.\r\n`);
+        client.write(`:chatter.today 376 ${own_nick} :- End of MOTD.\r\n`);
       }
          
       if(inc_msg.startsWith("JOIN ")){
@@ -153,7 +151,8 @@ function tryJoin(client,join_msg){
   }
   //list all users in the channel
   let userlist = getAllNicksInChan(channel);
-  
+  console.log("nicklist", `:chatter.today 353 ${conns_to_nicks.get(client)} = ${channel} :${userlist}\r\n`);
+
   client.write(`:chatter.today 353 ${conns_to_nicks.get(client)} = ${channel} :${userlist}\r\n`);
   client.write(`:chatter.today 366 ${conns_to_nicks.get(client)} ${channel} :End of /NAMES list.\r\n`);
 
@@ -167,13 +166,11 @@ function changeNick(client,wordArr){
 
 
   let new_nick = wordArr[1];
-	if(full_nick_list.includes(new_nick) || new_nick.indexOf('#'==0)){
+	if(nicks_to_conns.has(new_nick) || new_nick.indexOf('#'==0)){
 		return 0;
 	}
 
   let old_nick = conns_to_nicks.get(client);
-  full_nick_list.splice(full_nick_list.indexOf(old_nick),1);
-  full_nick_list.push(new_nick);
   conns_to_nicks.set(client,new_nick);
   nicks_to_conns.delete(old_nick);
   nicks_to_conns.set(new_nick,client);
@@ -184,6 +181,9 @@ function changeNick(client,wordArr){
 function sendToChannel(source, message){
 
     let msg = message.split(' :');
+    if(msg.length==1){
+      return;
+    }
     let channel = msg[0];
     msg = msg[1];
 
