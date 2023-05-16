@@ -1,12 +1,8 @@
 # irc.cured
-no brakes
 
-implement the retardations to your liking
+minimal implementation of an irc server
+doesnt update names list when people join part
+can join servvers and send messages
 
-msn nm'ne mal an man muesste sich an rtfcw ufckyou implemtneirung
+webclient on chatter.today
 
-also nen join #chan und part #chan ommt noch
-viellicht ping pong
-meht nich
-
-irgenwdie dcc support vielleicht
